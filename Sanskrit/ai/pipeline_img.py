@@ -48,14 +48,16 @@ from .craiyon_img       import append_images
 
 ##------------------------------------------------------------#------------------------------------------------------------
 ##------------------------------------------------------------#------------------------------------------------------------
-    ##  Saved MODELS
+    ##  RESULTS OF MODEL TESTS
     
+    #"redstonehero/Yiffymix"
+    #"redstonehero/Yiffymix_Diffusers"
     #"Fictiverse/Stable_Diffusion_PaperCut_Model"
     #"dallinmackay/Van-Gogh-diffusion"
     #"runwayml/stable-diffusion-v1-5"
 
 
-    ## Possible Choices OF SCHEDULER
+    ## RESULTS OF SCHEDULE TESTS
     
     #pipe.scheduler = LMSDiscreteScheduler.from_config(pipe.scheduler.config)
     #pipe.scheduler = PNDMScheduler.from_config(pipe.scheduler.config)
@@ -86,7 +88,7 @@ from .craiyon_img       import append_images
 
 ##------------------------------------------------------------
 def sd_file_path():
-    return Path('/Users/python/python/stable-diffusion/pretrained_models/')
+    return Path('/Users/arbybc/python/stable-diffusion/pretrained_models/')
 
 
 ##------------------------------------------------------------
@@ -128,18 +130,19 @@ def stable_diffusion_callback(update, context):
     user_id = update.effective_user.id
     chat_id = update.effective_chat.id
     user_seed = int(time.time())
-    print(f'{user_seed}')
+    #print(f'{user_seed}')
 
-    print(context.args)
+    print(f"Prompt: {context.args}")
     user_prompt = ' '.join(context.args)
-    print(user_prompt)
+    #print(f"Prompt: {user_prompt}")
     if user_prompt == '':
-        msg = update.message.reply_text(f"How to Generate Art: \n1. Begin with the command. \n2. Include tags or description. \n\n(Example)\n/aiart fox in space with the stars \n\n Ok, now you try! Each picture takes ~1min to generate.\n\nPlease only send (1) one prompt at a time! Sometimes messages fail to be received. Retry again if the 'sending screen' did not appear after 30sec.")
-        user_prompt = f'A curious user clicking on robot commands.'
+        msg = update.message.reply_text(f"How to Generate Yiff: \n1. Begin with the command. \n2. Include e621 tags or description. \n\n(Example)\n/yiff anthro, hot dogs, buns \n\n Ok, now you try! Each picture takes ~1min to generate.\n\nPlease only send (1) one prompt at a time! Sometimes messages fail to be received. Retry again if the 'sending screen' did not appear after 30sec.")
+        user_prompt = f'A curious furry clicking on robot commands.'
         return
         
-    neg = f'absurd resolution'
+    neg = f'my little pony, vore, scat, absurd resolution'
     h,w = 512,512
+    h,w = 704,576
     #h,w = 360,640
     
     #  For gay621  w, h = 832, 448 || w, h = 960, 640
@@ -152,8 +155,10 @@ def stable_diffusion_callback(update, context):
 
     msg = context.bot.send_photo(f'{update.effective_chat.id}', open('./Sanskrit/ai/ai_photos/computer_vision_logo.png','rb'), caption = f'Sending prompt: \"{user_prompt}\" to Stable Diffusion Model. ⏳', timeout=360)
     
-    sd_model = f'{sd_file_path()}' + f'runwayml/stable-diffusion-v1-5.safetensors'
+    sd_model = f'{sd_file_path()}' + f'/yiffymix_V36.safetensors'\
     vae_model = f'{sd_file_path()}' + f'/fixYourColorsVAE_vaeFtMse840000Ema.pt'
+    lora_model = f'{sd_file_path()}' +  f'/Jacato.safetensors'
+    
     
     pipe = StableDiffusionPipeline.from_single_file(f'{sd_model}', safety_checker=None)
     
@@ -166,6 +171,9 @@ def stable_diffusion_callback(update, context):
     #vae = AutoencoderKL.from_single_file(vae_model).to("mps")
     #pipeline.vae = vae
     
+    #pipe.unet.load_attn_procs(lora_model)
+    
+    
     pipe = pipe.to("mps")
     generator = torch.Generator(device="mps").manual_seed(user_seed)
 
@@ -175,8 +183,10 @@ def stable_diffusion_callback(update, context):
         num_inference_steps=inference_steps,
         height=h,
         width=w,
-        guidance_scale=6,
-        negative_prompt=neg).images[0]
+        guidance_scale=12.5,
+        negative_prompt=neg
+        #,cross_attention_kwargs={"scale": 0.5}
+        ).images[0]
         
     image.save(file_path(update, context))
 
@@ -189,8 +199,8 @@ def stable_diffusion_callback(update, context):
     return
 
 #------------------------------------------------------------
-stable_diffusion_command = CommandHandler("aiart", stable_diffusion_callback, run_async=True)
-stable_diffusion_setbotcommands  = [ BotCommand( 'aiart','..prompt the Ai to generate an image.')]
+stable_diffusion_command = CommandHandler("yiff", stable_diffusion_callback, run_async=True)
+stable_diffusion_setbotcommands  = [ BotCommand( 'yiff','..prompt the Ai to generate a yiffy image.')]
 #------------------------------------------------------------#------------------------------------------------------------
 #------------------------------------------------------------#------------------------------------------------------------
 
@@ -212,7 +222,7 @@ def pix2pix_callback(update, context):
     
     user_prompt = raw_prompt.replace('/pix2pix', '').replace('pix2pix', '').replace('\n ', '').strip()
     user_prompt = user_prompt.replace(f'controlnet', f'').strip()
-    if user_prompt == "": user_prompt =  f"turn it into a fox"
+    if user_prompt == "": user_prompt =  f"turn him into a furry fox fursona"
     print(f'{user_prompt = }')
 
     user_info(update, context)
@@ -255,7 +265,7 @@ def instruct_pix2pix(prompt: str, img : Image, neg='') -> Image:
     print(f'-- Instruct pix2pix || ')
     model_id = "timbrooks/instruct-pix2pix"
 
-    if prompt == "": prompt = "turn it into a fox"
+    if prompt == "": prompt = "turn him into a fox fursona"
     print(f'pix2pix prompt: {prompt}')
     
     pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(model_id, safety_checker=None)
@@ -277,12 +287,12 @@ def instruct_pix2pix(prompt: str, img : Image, neg='') -> Image:
 #------------------------------------------------------------
 def controlnet_image_modifier(prompt, img_frames, neg=f'') :
     print(f'-- Controlnet || ')
-    pretrained_model = f'{sd_file_path()}' + f'/runwayml/stable-diffusion-v1-5.safetensors'
+    pretrained_model = f'{sd_file_path()}' + f'/yiffymix_V40.safetensors'
     from_pretrained = False
     preprompt = f''
     postprompt = f', high resolution, best quality'
     
-    neg = f'absurd resolution'
+    neg = f'my little pony, vore, scat, absurd resolution'
     
     if '#vangogh' in prompt:
         pretrained_model = "dallinmackay/Van-Gogh-diffusion"
@@ -580,7 +590,7 @@ def gif_prompt_and_submit(update, context):
 
     if f'cancel' in user_prompt.casefold(): return
     
-    if user_prompt == '': user_prompt = f'A curious user clicking on robot commands.'
+    if user_prompt == '': user_prompt = f'A curious furry clicking on robot commands.'
     context.bot_data[user_id].add_stable_diffusion_call(user_prompt)
 
     # -- Remove settings and write ONLY user data to Json File
@@ -630,3 +640,221 @@ submit_gif_to_stablediffusion_convo = ConversationHandler(
     fallbacks = [MessageHandler(Filters.all, cancel_gif)]
     )
 
+
+"""
+
+
+"""
+
+
+
+"""
+new_mp4_frames = [ pil_image_to_cv(f) for f in new_gif_frames]
+
+cap = vidcap
+w = cap.get(cv2.CAP_PROP_FRAME_WIDTH);
+h = cap.get(cv2.CAP_PROP_FRAME_HEIGHT);
+img_res = (int(w),int(h))
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+video = cv2.VideoWriter(str(Path(file_path(update, context, file_type='.mp4'))), fourcc, fps_frames, img_res)
+for i in new_mp4_frames:
+    video.write(i)
+video.release()
+"""
+
+#------------------------------------------------------------
+#def style_transfer(update, context):
+    #processor_id = 'shuffle'            # Wonky swirls that seem random
+    #processor_id = 'softedge_hed'       # Thick lines, clear edges, internal structure appearing, mega blurry
+    #processor_id = 'softedge_hedsafe'   # Thick lines, edge outlines, shadows appearing
+    #processor_id = 'softedge_pidinet'   # Thick lines, connected at edges, some internal structure, blurry
+    #processor_id = 'scribble_hed'       # Thick lines, artifacts, does not capture all edges
+    #processor_id = 'scribble_pidinet'   # Thick lines with jumping artifacts
+    #processor_id = 'lineart_coarse'     # Thin lines with sharp outline and faint inner detail
+    #processor_id = 'lineart_realistic'  # Medium width lines, sharp contours of objects and lots of inner detail (slow)
+    #processor_id = 'lineart_anime'      # Not lines - colours filled in with style of "Xerox copy" (fast)
+
+    # 'depth_leres'
+    # 'depth_leres++'
+    # 'depth_midas'
+    # 'depth_zoe'
+
+    #style_types = [  'scribble_pidinet', 'lineart_coarse', 'lineart_realistic' ]
+    #style_types = ['depth_midas', 'depth_leres', 'depth_leres++']
+    #processors = [ Processor(id) for id in style_types ]
+    
+
+
+    #style_image = Image.open(Path(file_path(update, context, file_type='.test')))
+    #style_image = ImageOps.contain(style_image, (512, 512)).convert("RGB")
+ 
+
+    #new_gif_frames  = preprocess_depth_estimation(gif_frames)
+    #new_gif_frames  = preprocess_edge_outlines(gif_frames, processors)
+    #new_gif_frames  = preprocess_normal_estimation(gif_frames)
+    #new_gif_frames  = preprocess_segmentation_estimation(gif_frames)
+    
+
+
+    #print(f"Now saving gif...")
+    #new_gif_frames[0].save(Path(file_path(update, context, file_type='.gif')), format='GIF', append_images=new_gif_frames[1:], save_all=True, loop=0, duration= mspf_frames, disposal=0, optimize=True)
+
+
+    #print(f"Sending saved gif to chat...")
+    #msg = context.bot.send_animation(f'{update.effective_chat.id}', open(file_path(update, context, file_type='.gif'),'rb') , reply_to_message_id = update.message.message_id)
+    #print(f"Sent!")
+
+
+
+    
+    #diffused_gif = ebsynth_style_transfer(style_image, gif_frames, Path(file_path(update, context, file_type='.prefix')))
+
+
+    #prompt = f'furry fursuit fox racoon male gay'
+    #diffused_gif = controlnet_diffuser(prompt, new_gif_frames )
+    
+
+
+
+
+"""
+
+#------------------------------------------------------------
+def preprocess_multiprocessor(gif_imgs, processors):
+
+    start_time = datetime.now()
+    print(f"...preprocessing image edges...")
+ 
+    img_shape = (512, 512)
+    maxframe = len(gif_imgs)
+    outlined_gif = []
+    
+
+    
+    for index, parsed_img in enumerate(gif_imgs):
+        processed_images = [ proc(parsed_img, to_pil=True) for proc in processors ]
+        processed_images = [ ImageOps.contain(pic, img_shape).convert("RGB")  for pic in processed_images ]
+
+        if len(processed_images) < 2:
+            outlined_img = processed_images[0]
+        else:
+            outlined_img = processed_images[0]
+            for pic in processed_images[1:]:
+                outlined_img = ImageChops.multiply(outlined_img, pic)
+        
+        outlined_gif.append(outlined_img)
+        progress(index+1, maxframe)
+    
+    print(f"Time to Preprocess: {(datetime.now() - start_time).seconds} sec.")
+    return outlined_gif
+
+
+
+#------------------------------------------------------------
+def ebsynth_style_transfer(style_image, gif_frames, temp_save_path):
+    
+    start_time = datetime.now()
+    print(f"📑 Ebsynth Style Transfer...")
+    
+    
+    ebsynth_gif = []
+    source_target_file_paths = []
+    
+    maxframe = len(gif_frames)
+   
+    style_file_path  = f'{temp_save_path}' + f"/style.png"
+    target_file_path = f'{temp_save_path}'
+    source_file_path = f'{temp_save_path}'
+    output_file_path = f'{temp_save_path}' + f"/output.png"
+   
+
+    source_normal_gif_frames = preprocess_normal_estimation(gif_frames)
+    source_depth_gif_frames  = preprocess_depth_estimation(gif_frames)
+    source_segment_gif_frames  = preprocess_segmentation_estimation(gif_frames)
+
+    
+
+    data = [source_normal_gif_frames, source_depth_gif_frames, source_segment_gif_frames]
+    processed_gif_frames = list(map(tuple, zip(*data)))
+    
+ 
+    
+    
+    target_normal_frames  = preprocess_normal_estimation([style_image])
+    target_depth_frames  = preprocess_depth_estimation([style_image])
+    target_segment_frames  = preprocess_segmentation_estimation([style_image])
+
+    target_data = [target_normal_frames, target_depth_frames, target_segment_frames]
+    processed_targets = list(map(tuple, zip(*target_data)))
+    
+    #style_image = ImageOps.pad(style_image,)
+    #target_frame = target_segement_frames[0]
+    #target_frame = ImageOps.pad(target_frame, source_gif_frames[0].size)
+
+    style_image.save(style_file_path)
+    gif_frame_size = style_image.size
+    #target_frame.save(target_file_path)
+
+    weights = ["1","1","1"]
+
+    print(f"...running ebsynth method...")
+    
+    for index, source_frames in enumerate(processed_gif_frames):
+
+        #gif_frames[index].save(style_file_path)
+        run_command = ["./Sanskrit/ai/bin/ebsynth", "-style", f"{style_file_path}"]
+
+
+        for ind, proc_frame in enumerate(source_frames):
+            source_file_path_name = source_file_path + f"/source_{ind}.png"
+            target_file_path_name = target_file_path + f"/target_{ind}.png"
+            (ImageOps.pad(proc_frame, gif_frame_size)).save(source_file_path_name)
+            (ImageOps.pad(processed_targets[0][ind], gif_frame_size)).save(target_file_path_name)
+            run_command += [f"-guide",  f"{source_file_path_name}",  f"{target_file_path_name}", f"-weight", f"{weights[ind]}"]
+        
+        run_command += ["-output", f"{output_file_path}"]
+        subprocess.run(run_command, stdout=subprocess.DEVNULL)
+        
+        with Image.open(f'{output_file_path}') as pic:
+            ebsynth_gif.append(pic.convert("RGB"))
+        
+        progress(index+1, maxframe)
+    
+    
+    print(f"⭐️ Time to Preprocess: {(datetime.now() - start_time).seconds} sec.")
+    return ebsynth_gif
+
+#------------------------------------------------------------
+def controlnet_diffuser(prompt, gif_imgs):
+
+    #controlnet_model = "lllyasviel/sd-controlnet-scribble"
+    #controlnet_model = "lllyasviel/sd-controlnet-depth"
+    controlnet_model = "lllyasviel/sd-controlnet-normal"
+    controlnet_model = "lllyasviel/sd-controlnet-seg"
+    controlnet_model = "lllyasviel/sd-controlnet-hed"
+    #sd_model = "runwayml/stable-diffusion-v1-5"
+    sd_model = "redstonehero/Yiffymix_Diffusers"
+
+    controlnet = ControlNetModel.from_pretrained(controlnet_model)
+    pipe = StableDiffusionControlNetPipeline.from_pretrained(sd_model, controlnet=controlnet, safety_checker=None)
+    pipe.to("mps")
+    pipe.safety_checker = None
+    pipe.requires_safety_checker = False
+    pipe.enable_attention_slicing()
+
+    start_time = datetime.now()
+    print(f"Starting Stable Diffusion on Outlines...")
+    sd_gif = []
+    sd_image = gif_imgs[0]
+    
+    _ = pipe(f"", gif_imgs[0], num_inference_steps=1).images[0]
+    for index, pic in enumerate(gif_imgs):
+        inverted_image = pic
+        sd_image = pipe(f"{prompt}", inverted_image, num_inference_steps=10).images[0]
+        sd_gif.append(sd_image)
+        
+    print(f"Time to Diffuse: {(datetime.now() - start_time).seconds} sec.")
+    return sd_gif
+    
+    
+"""

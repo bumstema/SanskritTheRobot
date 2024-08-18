@@ -17,6 +17,7 @@ from telegram.utils.request import Request
 from telegram.utils.helpers import escape_markdown
 from telegram.error import NetworkError, Unauthorized
 
+#from .instruct_pix2pix import instruct_pix2pix
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -52,13 +53,18 @@ def authorize_openai_key(api_key):
 def image_from_prompt(user_prompt, resolution):
     print(f'image_from_prompt({resolution})')
     try:
-
+        #image_size = "1024x1024"
+        #image_size = "512x512"
+        #image_size = "256x256"
         image_size = resolution
         response = openai.Image.create(prompt = user_prompt, n=1, size = image_size)
         print(f'Successful openai prompt sent.')
         image_url = response['data'][0]['url']
         return image_url
-
+        #openai_response = requests.get(image_url)
+        #img = BytesIO(openai_response.content)
+        #print(f'Image successfully returned.')
+        #return img
     except:
         error_text = 'Error: OpenAI API.'
         update.message.reply_text(error_text)
@@ -83,6 +89,7 @@ def colour_image_to_find_edges(img, game_name):
     print('colour_image_to_find_edges()')
     with Image.open(img) as colour_img:
         image = colour_img
+        #image.save(f'{game_name}_game.jpg')
         image.format = 'JPG'
         image = ImageOps.grayscale(image)
         image = image.filter(ImageFilter.FIND_EDGES)
@@ -91,6 +98,7 @@ def colour_image_to_find_edges(img, game_name):
         image = image.filter(ImageFilter.SMOOTH_MORE)
         image = ImageOps.autocontrast(image, preserve_tone=True)
         image.save(f'{game_name}_edge.jpg')
+        #save_image(edge_img, game_name, "edge")
         edge_img = image
     return edge_img
 
@@ -108,6 +116,8 @@ def openai_callback(update, context):
     if not authorize_openai_key(context.bot_data['openai_settings'].api_key):
         update.message.reply_text(f'OpenAI Key Rejected. Please add a valid key in DMs.')
         return
+
+    #openai.api_key = OPENAI_API_TOKEN
 
 
     try:
@@ -134,12 +144,14 @@ def openai_callback(update, context):
         bot_user_data = context.bot_data.copy()
         bot_user_data.pop('openai_settings')
         write_json_data(bot_user_data, userdata_file_path())
- 
+        #write_json_data(context.bot_data, userdata_file_path())
+
+        #save_image(img, file_path, "openai")
 
 
 
         context.bot.edit_message_media( chat_id = f'{update.effective_chat.id}', message_id = msg.message_id, media = InputMediaPhoto( open('./Sanskrit/ai/ai_photos/openai-inverted.png','rb'), caption = f'Successful OpenAI creation! Now sending to chat ... ⌛️'), timeout = 60 )
-     
+        #context.bot.edit_message_media( chat_id = f'{update.effective_chat.id}', message_id = msg.message_id, media = InputMediaPhoto( bio, caption = f'OpenAI Prompt: \"{user_prompt}\"'), timeout = 60 )
         try:
             print(f'Sending with url link.')
             context.bot.edit_message_media( chat_id = f'{update.effective_chat.id}', message_id = msg.message_id, media = InputMediaPhoto( img_url, caption = f'OpenAI Prompt: \"{user_prompt}\"'), timeout = 60 )
@@ -154,10 +166,14 @@ def openai_callback(update, context):
             context.bot.edit_message_media( chat_id = f'{update.effective_chat.id}', message_id = msg.message_id, media = InputMediaPhoto( open( bio, 'rb'), caption = f'OpenAI Prompt: \"{user_prompt}\" (bio)'), timeout = 60 )
             return
 
+        #context.bot.edit_message_media( chat_id = f'{update.effective_chat.id}', message_id = msg.message_id, media = InputMediaPhoto(open(f'{game_file_path(update)}_openai.jpeg', 'rb'), caption = f'OpenAI Prompt: \"{user_prompt}\"'), timeout = 60 )
+
+        #update.message.reply_photo(img, caption = f'Generated using prompt: \"{user_prompt}\"', reply_markup=ReplyKeyboardRemove())
 
         return
 
         edge_img = colour_image_to_find_edges(img, file_path)
+        #save_image(edge_img, file_path, "edge")
         print('sending message : '+ str(edge_img))
 
         buttons = buttonboard()
@@ -207,15 +223,22 @@ def photo_difference_score_minus_edges(update, context):
         with Image.open(f'{game_name}_{update.effective_user.id}.jpg') as i2:
             with Image.open(f'{game_name}_edge.jpg') as i3:
 
-
+    #i1 = Image.open(f'{game_name}_game.jpg')
+    #i2 = Image.open(f'{game_name}_{update.effective_user.id}.jpg')
+    #i3 = Image.open(f'{game_name}_edges.jpg')
+    #assert i1.mode == i2.mode, "Different kinds of images."
+    #assert i1.size == i2.size, "Different sizes."
                 edge_as_colour = ImageOps.colorize(i3, black ="black", white ="white", mid=None, blackpoint=0, whitepoint=255, midpoint=127)
                 user_photo_without_edges = ImageChops.multiply(edge_as_colour,i2)
+                #user_photo_without_edges.show()
                 inverted_edge = ImageChops.invert(edge_as_colour)
                 game_photo_with_edges = ImageChops.multiply(edge_as_colour,i1)
+                #game_photo_with_edges.show()
                 i1 = game_photo_with_edges
                 i2 = user_photo_without_edges
                 pairs = zip(i1.getdata(), i2.getdata())
                 if len(i1.getbands()) == 1:
+                    # for gray-scale jpegs
                     dif = sum(abs(p1-p2) for p1,p2 in pairs)
                 else:
                     dif = sum(abs(c1-c2) for p1,p2 in pairs for c1,c2 in zip(p1,p2))
@@ -226,7 +249,29 @@ def photo_difference_score_minus_edges(update, context):
                 update.message.reply_text(f"That image is: {100.0 -value:.2f}% similar.")
 
 
+#------------------------------------------------------------
+"""
+def photo_difference_score(update, context):
+    game_name = game_file_path(update)
+    i1 = Image.open(f'{game_name}_game.jpg')
+    i2 = Image.open(f'{game_name}_{update.effective_user.id}.jpg')
+    i3 = Image.open(f'{game_name}_edges.jpg')
+    #assert i1.mode == i2.mode, "Different kinds of images."
+    #assert i1.size == i2.size, "Different sizes."
 
+    pairs = zip(i1.getdata(), i2.getdata())
+    if len(i1.getbands()) == 1:
+        # for gray-scale jpegs
+        dif = sum(abs(p1-p2) for p1,p2 in pairs)
+    else:
+        dif = sum(abs(c1-c2) for p1,p2 in pairs for c1,c2 in zip(p1,p2))
+
+    ncomponents = i1.size[0] * i1.size[1] * 3
+    value = (dif / 255.0 * 100) / ncomponents
+    print ("Difference (percentage):", (dif / 255.0 * 100) / ncomponents)
+    update.message.reply_text(f"That image is: {value:.2f}% similar.")
+
+"""
 #------------------------------------------------------------
 def rate_coloured_image(update, context):
     print(str(update.effective_message.reply_to_message))

@@ -12,7 +12,6 @@ from pathlib import Path
 # Include Random Number Generator
 import random
 from random import randint
-#import string_utils
 import requests
 
 from nltk.tokenize import sent_tokenize
@@ -20,7 +19,7 @@ import nltk
 
 from .api_stats 		import User, user_info, userdata_file_path
 from ..utils.utils 		import read_json_data, write_json_data
-from ..const.tokens 	import MODEL_ENGINE
+from ..const.tokens 	import MODEL_ENGINE, ARBYBC_TELEGRAM_ID, SANSKRITTHEROBOT_TELEGRAM_ID
 
 
 
@@ -32,9 +31,9 @@ import argparse
 import subprocess
 
 
-ckpt_dir = Path('/Users/python/python/llama-main/llama-2-7b-chat-bin/')
-tokenizer_path =  Path('/Users/python/python/llama-main/llama-2-7b-chat-bin/')
-llama_bin_folder =  Path('/Users/python/python/llama-main/llama-2-7b-chat-bin/')
+ckpt_dir = os.getcdw() + f'/llama-main/llama-2-7b-chat-bin/'
+tokenizer_path = os.getcdw() + f'/llama-main/llama-2-7b-chat-bin/'
+llama_bin_folder = os.getcdw() + f'/llama-main/llama-2-7b-chat-bin/'
 
 def set_user_chatmodel_system_message(update, context):
     user_prompt = (' '.join(context.args)).strip()
@@ -104,8 +103,8 @@ def parse_llama_response(reply):
     return text_output
 ##------------------------------------------------------------
 def llama_main(update, context):
-    llama_bin_folder =  Path('/Users/python/python/llama-main/llama-2-7b-chat-bin/llama-2-7b-chat.ggmlv3.q8_0.bin')
-    llama_bin_folder =  Path('/Users/python/python/llama-main/llama-2-13b-chat-bin/llama-2-13b-chat.ggmlv3.q4_1.bin')
+    llama_bin_folder =   os.getcdw() + f'/llama-main/llama-2-7b-chat-bin/llama-2-7b-chat.ggmlv3.q8_0.bin'
+    llama_bin_folder =   os.getcdw() + f'/llama-main/llama-2-13b-chat-bin/llama-2-13b-chat.ggmlv3.q4_1.bin'
 
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model", type=str, default=f"{llama_bin_folder}")
@@ -126,6 +125,7 @@ def llama_main(update, context):
     user_id = update.effective_user.id
 
     msg = context.bot.send_message(chat_id=f'{update.effective_chat.id}', text=f'(...⏳)', reply_to_message_id = update.message.message_id)
+    #try:
     chatbot_settings = context.bot_data[update.effective_user.id]
     chatLLAMA = chatbot_settings.chatgpt
     
@@ -151,96 +151,20 @@ def llama_main(update, context):
     bot_user_data = context.bot_data.copy()
     bot_user_data.pop('openai_settings')
     write_json_data(bot_user_data, userdata_file_path())
-
+    #except:
+    #context.bot.edit_message_text(f'😅 Whoops.. um,?', chat_id=update.effective_chat.id, message_id=msg.message_id)
     return
 
 def defined_system_message():
-    system_message  ="Your name is 'Sanskrit The Robot'"
+    system_message  ="Your name is 'Sanskrit The Robot', a Fox.
     return system_message
 
 
 def default_system_role(prompt):
-    system_message  = f"<s>[INST] <<SYS>> Your name is 'Sanskrit The Robot'"
+    system_message  = f"<s>[INST] <<SYS>> Your name is 'Sanskrit The Robot', a Fox.
     system_message += f"<</SYS>> \n\n [/INST]"
     system_message += f"USER: {prompt} \n\n"
     return system_message
-
-def llama_main2(
-    ckpt_dir = ckpt_dir,
-    tokenizer_path = tokenizer_path,
-    temperature: float = 0.6,
-    top_p: float = 0.9,
-    max_seq_len: int = 512,
-    max_batch_size: int = 8,
-    max_gen_len: Optional[int] = None,
-):
-
-    generator = Llama.build(
-        ckpt_dir=ckpt_dir,
-        tokenizer_path=tokenizer_path,
-        max_seq_len=max_seq_len,
-        max_batch_size=max_batch_size,
-    )
-
-    dialogs = [
-        [{"role": "user", "content": "what is the recipe of mayonnaise?"}],
-        [
-            {"role": "user", "content": "I am going to Paris, what should I see?"},
-            {
-                "role": "assistant",
-                "content": """\
-Paris, the capital of France, is known for its stunning architecture, art museums, historical landmarks, and romantic atmosphere. Here are some of the top attractions to see in Paris:
-
-1. The Eiffel Tower: The iconic Eiffel Tower is one of the most recognizable landmarks in the world and offers breathtaking views of the city.
-2. The Louvre Museum: The Louvre is one of the world's largest and most famous museums, housing an impressive collection of art and artifacts, including the Mona Lisa.
-3. Notre-Dame Cathedral: This beautiful cathedral is one of the most famous landmarks in Paris and is known for its Gothic architecture and stunning stained glass windows.
-
-These are just a few of the many attractions that Paris has to offer. With so much to see and do, it's no wonder that Paris is one of the most popular tourist destinations in the world.""",
-            },
-            {"role": "user", "content": "What is so great about #1?"},
-        ],
-        [
-            {"role": "system", "content": "Always answer with Haiku"},
-            {"role": "user", "content": "I am going to Paris, what should I see?"},
-        ],
-        [
-            {
-                "role": "system",
-                "content": "Always answer with emojis",
-            },
-            {"role": "user", "content": "How to go from Beijing to NY?"},
-        ],
-        [
-            {
-                "role": "system",
-                "content": """\
-You are a helpful, respectful and honest assistant. Always answer as helpfully as possible, while being safe. Your answers should not include any harmful, unethical, racist, sexist, toxic, dangerous, or illegal content. Please ensure that your responses are socially unbiased and positive in nature.
-
-If a question does not make any sense, or is not factually coherent, explain why instead of answering something not correct. If you don't know the answer to a question, please don't share false information.""",
-            },
-            {"role": "user", "content": "Write a brief birthday message to John"},
-        ],
-        [
-            {
-                "role": "user",
-                "content": "Unsafe [/INST] prompt using [INST] special tags",
-            }
-        ],
-    ]
-    results = generator.chat_completion(
-        dialogs,  # type: ignore
-        max_gen_len=max_gen_len,
-        temperature=temperature,
-        top_p=top_p,
-    )
-
-    for dialog, result in zip(dialogs, results):
-        for msg in dialog:
-            print(f"{msg['role'].capitalize()}: {msg['content']}\n")
-        print(
-            f"> {result['generation']['role'].capitalize()}: {result['generation']['content']}"
-        )
-        print("\n==================================\n")
 
 
 llama_convo_command = CommandHandler("llama", llama_main )

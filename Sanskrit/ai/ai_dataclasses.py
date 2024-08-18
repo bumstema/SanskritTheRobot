@@ -37,12 +37,12 @@ class ChatGPT():
 
     def default_system_role(self):
         return ""
-        system_message  = f"ChatGPT, your name is 'Sanskrit The Robot', a Fox in space amongst the stars and moon.
+        system_message  = f"ChatGPT, your name is 'Sanskrit The Robot', the robot fox."
         return system_message
 
 
     def default_assistant_role(self):
-        assistant_message = f"OwO"
+        assistant_message = f"Pull my tail! This magic foxy will answer yowr qwestions! OwO"
         return assistant_message
 
     def __init__(self):
@@ -53,7 +53,7 @@ class ChatGPT():
         self.previous_prompt    = ""
 
     def from_json_dict(self, d, **kwargs):
-        print('... Restoring ChatGPT prompt settings ...')
+        #print('... Restoring ChatGPT prompt settings ...')
         self.role_system        = d['role_system']
         self.role_assistant     = d['role_assistant']
         self.user_prompt        = d['user_prompt']
@@ -183,7 +183,7 @@ class OpenAiSettings():
     chatgpt             : ChatGPT()
 
     def __init__(self):
-        self.api_key = f"sk-----"
+        self.api_key = f""
         self.key_owner = 12345
         self.allow_usage = True
         self.chance_to_bark = 1
@@ -205,7 +205,9 @@ class OpenAiSettings():
 
     def show_api_key(self):
         key_length = len(self.api_key)
+        #print(f'{key_length}')
         censored_key = f"{self.api_key[:7]}" + '*'*(key_length-7-4) + f"{self.api_key[-4:]}"
+        #print(f'{censored_key} \n length {len(censored_key)}')
         return censored_key
 
     def set_key_owner(self, owner_id):

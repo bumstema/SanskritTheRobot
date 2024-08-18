@@ -22,14 +22,13 @@ import nltk
 from .ai_dataclasses 	import User, OpenAiSettings
 from .api_stats 		import  user_info, userdata_file_path
 from ..utils.utils 		import read_json_data, write_json_data
-from ..const.tokens 	import MODEL_ENGINE, SANSKRITTHEROBOT_TELEGRAM_ID
+from ..const.tokens 	import MODEL_ENGINE, ARBYBC_TELEGRAM_ID, SANSKRITTHEROBOT_TELEGRAM_ID
 
 from .llama_chat 		import llama_main
 
 
 ##------------------------------------------------------------
 ##------------------------------------------------------------
-
 ##------------------------------------------------------------
 def authorize_openai_key(openai_api_key):
 
@@ -57,7 +56,44 @@ def failed_chance_to_bark(bark_rate):
     else:
         return failed_failing_to_bark
 
+
+
+##------------------------------------------------------------
+# Define a function that responds to user messages
+def send_message_to_chatgpt(update, context):
+    print(f'Call from: {update.effective_user.username} in {update.effective_chat.title}')
+    print(f'Room: {update.effective_chat.id} \t {update.effective_chat.username} \t {update.effective_chat.title} \nUser: {update.effective_user.id} \t {update.effective_user.username} \nMsg : {update.effective_message.message_id} \t {update.effective_message.text}')
+    #return
+
+    #return
+    
+    openai_settings = context.bot_data['openai_settings']
+
+    #if openai_settings.allow_usage == False : return
+
+    #print(f'{hasattr( update.message , "reply_to_message")}')
+
+    if getattr( update.effective_message , "reply_to_message") == None:
+        if failed_chance_to_bark( openai_settings.chance_to_bark ):
+            return
+    else:
+        if hasattr( update.effective_message , "reply_to_message"):
+            if update.effective_message.reply_to_message.from_user.id != SANSKRITTHEROBOT_TELEGRAM_ID:
+                print('Not a reply to the robot.')
+                return
+
+    user_prompt = update.effective_message.text
+    llama_main(update, context)
+    
+    
+    # Save succesful api call user metadata to Json File
+    print(f'Adding prompt to user: {update.effective_user.id} statistics.')
+    return
+ 
+
 #-------------------------------------------------------------
+def basic_bitch_filter( prompt : str ):
+    return str(prompt).replace('sex','adult knotties').replace('ass', 'tail star').replace('butt', 'rumparoo').replace('yiff', 'yiffywiffy').replace('penis', 'weenor').replace('dick', 'dingdong').replace('cock', 'redrooster').replace('vagina','frontbum').replace('cunt','cunnywunny').replace(' cum ',' male nectar ').replace('horny','in heat').replace('bitch', 'female doggo').replace('in your tail','inside of a tail which is hiked').replace('orgasm', 'big time sploogieroo').replace('gay','typical fox on fox funtime love').replace('homo','special two guy bro time')
 
 #-------------------------------------------------------------
 def bitch_ass_response_filter( response: str ):
@@ -77,87 +113,6 @@ def bitch_ass_response_filter( response: str ):
 
     return response
 
-
-
-
-##------------------------------------------------------------
-# Define a function that responds to user messages
-def send_message_to_chatgpt(update, context):
-    print(f'Call from: {update.effective_user.username} in {update.effective_chat.title}')
-    print(f'Room: {update.effective_chat.id} \t {update.effective_chat.username} \t {update.effective_chat.title} \nUser: {update.effective_user.id} \t {update.effective_user.username} \nMsg : {update.effective_message.message_id} \t {update.effective_message.text}')
-
-    openai_settings = context.bot_data['openai_settings']
-
-
-    if getattr( update.effective_message , "reply_to_message") == None:
-        if failed_chance_to_bark( openai_settings.chance_to_bark ):
-            return
-    else:
-        if hasattr( update.effective_message , "reply_to_message"):
-            if update.effective_message.reply_to_message.from_user.id != SANSKRITTHEROBOT_TELEGRAM_ID:
-                print('Not a reply to the robot.')
-                return
-
-    user_prompt = update.effective_message.text
-    llama_main(update, context)
-    
-    
-    # Save succesful api call user metadata to Json File
-    print(f'Adding prompt to user: {update.effective_user.id} statistics.')
-    
-    
-
-    user_info(update, context)
-    user_id = update.effective_user.id
-    context.bot_data[user_id].add_openai_call(user_prompt)
-    # -- Remove settings and write ONLY user data to Json File
-    bot_user_data = context.bot_data.copy()
-    bot_user_data.pop('openai_settings')
-    write_json_data(bot_user_data, userdata_file_path())
-    return
-    
-    openai_settings = context.bot_data['openai_settings']
-    chatGPT = openai_settings.chatgpt
-
-    chatGPT.update_user_prompt_role(user_prompt)
-    print(f'Prompt: {chatGPT.user_prompt}')
-    print(f'{chatGPT.full_chatgpt_prompt()}')
-    
-    # Call the OpenAI API to generate a response
-    #openai.api_key = openai_settings.get_api_key()
- 
-    with requests.Session() as session:
-        openai.requestssession = session
-        response = openai.ChatCompletion.create(
-            model = MODEL_ENGINE,
-            messages = chatGPT.full_chatgpt_prompt(),
-            temperature = 1.2,
-            user = str(update.effective_chat.id)
-        )
-
-
-        respond = response['choices'][0]['message']['content']
-        openai.requestssession = None
-
-
-    chatGPT.update_last_response(respond)
-    print(f'Response: {chatGPT.last_response}')
-    print(f'ChatGPT response: "{chatGPT.last_response}"')
-
-    
-
-    filtered_last_response = bitch_ass_response_filter(chatGPT.last_response)
-
-
-    sentences = sent_tokenize(filtered_last_response)
-    no_questions = [s for s in sentences if "?" not in s]
-    filtered_last_response = " ".join(no_questions)
-
-    # Send the response back to the user via Telegram
-    context.bot.send_message(chat_id=f'{update.effective_chat.id}', text=f'{filtered_last_response}', reply_to_message_id = update.message.message_id)
-
-
-    context.bot.send_message(chat_id=f'{update.effective_chat.id}', text=f'OwO I didn\'t receive my brain words.', reply_to_message_id = update.message.message_id)
 
 
 ##------------------------------------------------------------

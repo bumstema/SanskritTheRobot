@@ -27,6 +27,80 @@ from typing import List
 from ..utils.utils import  read_json_data, write_json_data
 from .ai_dataclasses 	import User
 #------------------------------------------------------------
+"""
+"@dataclass
+class User():
+    id                      : int
+    username                : str
+    total_openai_calls      : int
+    total_craiyon_calls     : int
+    total_local_ai_calls    : int
+    prompts                 : List = field(default_factory=lambda: [])
+
+    def __init__(self ):
+        self.id = 0
+        self.username = ""
+        self.total_openai_calls = 0
+        self.total_craiyon_calls = 0
+        self.prompts = []
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+    def first(self, effective_user):
+        self.id                     = effective_user.id
+        self.username               = effective_user.username
+        self.total_openai_calls     = 0
+        self.total_craiyon_calls    = 0
+        self.total_local_ai_calls   = 0
+        self.total_llm_calls        = 0
+        self.prompts                = []
+        return
+
+    def from_json_dict(self, d):
+        self.id                     = d['id']
+        self.username               = d['username']
+        self.total_openai_calls     = d['total_openai_calls']
+        self.total_craiyon_calls    = d['total_craiyon_calls']
+        self.prompts                = d['prompts']
+        self.total_local_ai_calls   = d['total_local_ai_calls']
+        self.total_llm_calls        = d['total_local_ai_calls']
+
+        return
+
+    def add_prompt(self, user_prompt):
+        self.prompts.append(user_prompt)
+        return
+
+    def add_craiyon_call(self, user_prompt):
+        self.total_craiyon_calls += 1
+        self.prompts.append(user_prompt)
+        return
+
+    def add_openai_call(self, user_prompt):
+        self.total_openai_calls += 1
+        self.prompts.append(user_prompt)
+        return
+
+    def add_local_ai_call(self, user_prompt):
+        self.total_local_ai_calls += 1
+        self.prompts.append(user_prompt)
+        return
+
+    def add_llm_call(self, user_prompt):
+        self.total_llm_calls += 1
+        self.prompts.append(user_prompt)
+        return
+
+    def get_api_totals(self):
+        return {'openai': self.total_openai_calls , 'craiyon': self.total_craiyon_calls, 'stable_diffusion': self.total_local_ai_calls, 'prompts': self.prompts}
+
+    def get_api_total_sum(self):
+        return (self.total_openai_calls + self.total_craiyon_calls + self.total_local_ai_calls)
+
+    def save_number(self):
+        return self.total_craiyon_calls + 1
+"""
 ##------------------------------------------------------------
 def all_users_api_stats_callback(update, context):
     user_info(update, context)
@@ -98,20 +172,18 @@ def load_json_userdata(update, context):
 
 ##------------------------------------------------------------
 def user_info(update, context):
-    print('updating bot_data with saved user_info()')
-
+    print('user_info || Refreshing lasted saved bot_data.')
     try:
         load_json_userdata(update, context)
-        print('json read')
     except:
         text = "no json file found"
-
     user_id = update.effective_user.id
-
-    if user_id not in context.bot_data:
+    bot_users_ids = [str(id_) for id_ in list(context.bot_data.keys())]
+    if str(user_id) not in bot_users_ids:
+        print(f"... Adding new user ({user_id}) to bot_data.")
         user = User()
         user.first(update.effective_user)
-        context.bot_data.setdefault(user_id,  user )
+        context.bot_data.setdefault(user_id, user)
 
         bot_user_data = context.bot_data.copy()
         try:
@@ -119,7 +191,6 @@ def user_info(update, context):
         except:
             pass
         write_json_data(bot_user_data, userdata_file_path())
-        print('json write')
     return
 
 
